@@ -18,6 +18,22 @@
       ]
     },
     {
+      "collectionGroup": "files",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "createdBy", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "file_movements",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "fromUser", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "file_movements",
       "queryScope": "COLLECTION",
       "fields": [
