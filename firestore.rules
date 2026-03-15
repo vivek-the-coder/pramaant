@@ -1,0 +1,87 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── Helper Functions ──────────────────────────────────
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function hasRole(role) {
+      return isAuthenticated() && request.auth.token.role == role;
+    }
+
+    function isClerk() {
+      return hasRole('clerk');
+    }
+
+    function isOfficer() {
+      return hasRole('officer');
+    }
+
+    function isAdmin() {
+      return hasRole('admin');
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // ─── Users ─────────────────────────────────────────────
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() || isOwner(userId);
+    }
+
+    // ─── Files ─────────────────────────────────────────────
+    match /files/{fileId} {
+      allow read: if isAuthenticated();
+      allow create: if isClerk() || isOfficer() || isAdmin();
+      allow update: if isOfficer() || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ─── File Movements ────────────────────────────────────
+    match /file_movements/{movementId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if false; // Immutable
+    }
+
+    // ─── Audit Logs (APPEND-ONLY) ──────────────────────────
+    match /audit_logs/{logId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if false; // NEVER allow modification
+    }
+
+    // ─── SLA Tracking ──────────────────────────────────────
+    match /sla_tracking/{fileId} {
+      allow read: if isAuthenticated();
+      allow write: if false; // Only Cloud Functions can write
+    }
+
+    // ─── Notifications ─────────────────────────────────────
+    match /notifications/{notifId} {
+      allow read: if isAuthenticated() &&
+                     resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() &&
+                       resource.data.userId == request.auth.uid &&
+                       request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['read']); // Only allow marking as read
+      allow create, delete: if false; // Only Cloud Functions
+    }
+
+    // ─── Blockchain Anchors ────────────────────────────────
+    match /blockchain_anchors/{anchorId} {
+      allow read: if isAuthenticated();
+      allow write: if false; // Only Cloud Functions
+    }
+
+    // ─── Counters ──────────────────────────────────────────
+    match /counters/{counterId} {
+      allow read, write: if false; // Only Cloud Functions
+    }
+  }
+}
