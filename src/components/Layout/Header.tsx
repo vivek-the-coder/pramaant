@@ -77,6 +77,7 @@ const Header = () => {
             <ManualBindingModal
                 isOpen={isRegistrationOpen}
                 onClose={() => setIsRegistrationOpen(false)}
+                onSuccess={() => window.dispatchEvent(new Event('fileCreated'))}
             />
         </>
     );

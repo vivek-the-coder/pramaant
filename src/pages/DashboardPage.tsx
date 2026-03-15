@@ -25,48 +25,55 @@ const DashboardPage = () => {
     const [selectedFile, setSelectedFile] = useState<{ fileId: string, service: string } | null>(null);
     const [isHandoverOpen, setIsHandoverOpen] = useState(false);
 
-    useEffect(() => {
-        const fetchStats = async () => {
-            try {
-                const data = await getDashboardStats();
+    const fetchStats = async () => {
+        try {
+            const data = await getDashboardStats();
 
-                // Map all files to recent activity
-                const allFiles = data.recentFiles || [];
+            // Map all files to recent activity
+            const allFiles = data.recentFiles || [];
 
-                // Stats
-                setStats({
-                    registered: data.totalFiles || allFiles.length,
-                    dispatched: data.approved || 0
-                });
+            // Stats
+            setStats({
+                registered: data.totalFiles || allFiles.length,
+                dispatched: data.approved || 0
+            });
 
-                // Recent Activity — last 10 files
-                setRecentActivity(allFiles.slice(0, 10).map((file: any) => {
-                    const date = file.createdAt ? new Date(file.createdAt) : new Date();
-                    return {
-                        time: date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
-                        fileId: file.id,
-                        applicant: file.citizenName || 'Unknown',
-                        service: file.category || 'Unknown'
-                    };
+            // Recent Activity — last 10 files
+            setRecentActivity(allFiles.slice(0, 10).map((file: any) => {
+                const date = file.createdAt ? new Date(file.createdAt) : new Date();
+                return {
+                    time: date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+                    fileId: file.id,
+                    applicant: file.citizenName || 'Unknown',
+                    service: file.category || 'Unknown'
+                };
+            }));
+
+            // Forwarding Queue — files pending that haven't been forwarded yet
+            const pending = allFiles
+                .filter((f: any) => f.status === 'PENDING_REVIEW' && !f.forwardedAt)
+                .map((file: any, i: number) => ({
+                    id: String(i + 1),
+                    fileId: file.id,
+                    service: file.category || 'GENERAL',
+                    applicant: file.citizenName || 'Unknown',
                 }));
+            setForwardingQueue(pending);
 
-                // Forwarding Queue — files pending that haven't been forwarded yet
-                const pending = allFiles
-                    .filter((f: any) => f.status === 'PENDING_REVIEW' && !f.forwardedAt)
-                    .map((file: any, i: number) => ({
-                        id: String(i + 1),
-                        fileId: file.id,
-                        service: file.category || 'GENERAL',
-                        applicant: file.citizenName || 'Unknown',
-                    }));
-                setForwardingQueue(pending);
+        } catch (err) {
+            console.error("Failed to load dashboard stats:", err);
+        }
+    };
 
-            } catch (err) {
-                console.error("Failed to load dashboard stats:", err);
-            }
-        };
-
+    useEffect(() => {
         fetchStats();
+
+        // Auto-refresh when a new file is created
+        const handleFileCreated = () => {
+            setTimeout(() => fetchStats(), 500);
+        };
+        window.addEventListener('fileCreated', handleFileCreated);
+        return () => window.removeEventListener('fileCreated', handleFileCreated);
     }, []);
 
     const handleProcessClick = (file: QueueFile) => {

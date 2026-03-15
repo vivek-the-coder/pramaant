@@ -6,9 +6,10 @@ import { createFile } from '../../services/fileService';
 interface ManualBindingModalProps {
     isOpen: boolean;
     onClose: () => void;
+    onSuccess?: () => void;
 }
 
-const ManualBindingModal = ({ isOpen, onClose }: ManualBindingModalProps) => {
+const ManualBindingModal = ({ isOpen, onClose, onSuccess }: ManualBindingModalProps) => {
     const [formData, setFormData] = useState({
         fileRefId: '',
         serviceType: '',
@@ -40,6 +41,7 @@ const ManualBindingModal = ({ isOpen, onClose }: ManualBindingModalProps) => {
 
             setCreatedFileId(result.fileId);
             setQrUrl(result.qrUrl);
+            if (onSuccess) onSuccess();
         } catch (err) {
             console.error(err);
             alert('Failed to create file');
